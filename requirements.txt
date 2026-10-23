@@ -1,0 +1,5 @@
+requests
+httpx
+user_agent
+cfonts
+flask
